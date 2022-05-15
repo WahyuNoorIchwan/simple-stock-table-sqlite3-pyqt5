@@ -23,9 +23,12 @@ class mainWindow(QtWidgets.QMainWindow):
         self.mainFrame = QtWidgets.QFrame()
         self.mainLayout = QtWidgets.QVBoxLayout()
 
-        # Create Window Layout
+        # Create Window Layout - Buttons and Table
         self.createButtons()
         self.createTable()
+        
+        # Fill Table when app is starting
+        self.fillTable()
         
         # Setup Main Frame to Main Window
         self.mainFrame.setLayout(self.mainLayout)
@@ -45,6 +48,7 @@ class mainWindow(QtWidgets.QMainWindow):
         group_ly.addWidget(add_button)
         
         del_button = QtWidgets.QPushButton("Delete Data")
+        del_button.clicked.connect(self.deleteData)
         group_ly.addWidget(del_button)
         
         # Setup buttons group & add to main layout
@@ -53,7 +57,17 @@ class mainWindow(QtWidgets.QMainWindow):
 
     # Method - Create Table
     def createTable(self):
-        # Table is used to view data inside database
+        # Create Table Widget - Setup Number of Row, Columns, Headers
+        self.table = QtWidgets.QTableWidget()
+        
+        self.table.setColumnCount(4)
+        self.table.setHorizontalHeaderLabels(["", "Name", "Phone", "Address"])
+                
+        # Add Table to Main Layout
+        self.mainLayout.addWidget(self.table)
+        
+    # Method Fill - Table
+    def fillTable(self):
         # First Get Data from Database then Insert to Table Widget
         
         # Get Data from SQLite Table
@@ -63,11 +77,7 @@ class mainWindow(QtWidgets.QMainWindow):
         data = cursor.execute("""SELECT * FROM profile""").fetchall()
         conn.close()
         
-        # Create Table Widget - Setup Number of Row, Columns, Headers
-        self.table = QtWidgets.QTableWidget()
-        
-        self.table.setColumnCount(4)
-        self.table.setHorizontalHeaderLabels(["", "Name", "Phone", "Address"])
+        # Adjust row number to data number
         self.table.setRowCount(len(data))
         
         # Fill Table Cells using data from Database
@@ -79,9 +89,8 @@ class mainWindow(QtWidgets.QMainWindow):
                 self.table.setItem(i, j+1, 
                                    QtWidgets.QTableWidgetItem(str(data[i][j])))
                 
-        # Add Table to Main Layout
+        # Setup colum width to fit contents
         self.table.resizeColumnsToContents()
-        self.mainLayout.addWidget(self.table)
         
     # Method - Add Data
     def addDataDialog(self):
@@ -127,17 +136,39 @@ class mainWindow(QtWidgets.QMainWindow):
         conn.commit()
         conn.close()
         
-        # Update Table - Add Row Number
-        self.table.setRowCount(self.table.rowCount() + 1)
+        # Update Table 
+        self.fillTable()
         
-        # Insert Add Data to Table Widget
-        for i in range(3):
-            self.table.setItem(self.table.rowCount()-1, i, 
-                               QtWidgets.QTableWidgetItem(str(batch[i])))
-            
-        # Close Dialog
+        # Close Forms Dialog
         self.addDialog.close()
         
+    # Method - Delete Data
+    def deleteData(self):
+        # Delete data based on check box
+        
+        # Connection and Cursor to delete SQL data and fill table
+        conn = sqlite3.connect("database.db")
+        cursor = conn.cursor()
+        
+        # First get name of checked (want to delete)
+        # name will be used to delete record on database
+        deletedName = []
+        for i in range(self.table.rowCount()):
+            # Add Name to deleted if checked
+            if self.table.cellWidget(i, 0).isChecked():
+                deletedName.append(self.table.item(i, 1).text())
+                
+        # Delete Data From SQL
+        for name in deletedName:
+            cursor.execute("""DELETE FROM profile WHERE name='{}'""".format(
+                name))
+        
+        # Commit Change
+        conn.commit()
+        
+        # Refresh table contents
+        self.fillTable()
+            
 # Class - Application
 class Main():
     def __init__(self):
