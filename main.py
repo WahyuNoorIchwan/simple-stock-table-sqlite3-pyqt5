@@ -165,6 +165,7 @@ class mainWindow(QtWidgets.QMainWindow):
         
         # Commit Change
         conn.commit()
+        conn.close()
         
         # Refresh table contents
         self.fillTable()
